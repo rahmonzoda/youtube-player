@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+        #player-container {
+            width: 100%;
+            height: 100vh;
+            background: #000;
+            position: relative;
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+        }
+        .info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 5px 10px;
+            border-radius: 8px;
+            text-align: center;
+            color: #fff;
+            font-size: 16px;
+            z-index: 10;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div id="player-container">
+        <div class="info" id="info">Loading player...</div>
+        <div id="player"></div>
+    </div>
+
+    <script>
+        // Get video ID from URL parameter
+        function getVideoId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        const videoId = getVideoId();
+        let player;
+
+        // Initialize player function
+        function initPlayer() {
+            if (!videoId) {
+                const infoEl = document.getElementById('info');
+                infoEl.innerHTML = '<div class="error">No video ID provided<br>Use ?id=VIDEO_ID in the URL</div>';
+                return;
+            }
+
+            player = new YT.Player('player', {
+                videoId: videoId,
+                playerVars: {
+                    'playsinline': 1,
+                    'autoplay': 0,
+                    'controls': 1,
+                    'rel': 0
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onError': onPlayerError
+                }
+            });
+        }
+
+        // Called when API is ready
+        function onYouTubeIframeAPIReady() {
+            initPlayer();
+        }
+
+        // If API is already loaded, initialize immediately
+        if (window.YT && window.YT.Player) {
+            initPlayer();
+        }
+
+        function onPlayerReady(event) {
+            document.getElementById('info').style.display = 'none';
+        }
+
+        function onPlayerError(event) {
+            const infoEl = document.getElementById('info');
+            let errorMsg = 'Error loading video';
+            switch(event.data) {
+                case 2:
+                    errorMsg = 'Invalid video ID';
+                    break;
+                case 5:
+                    errorMsg = 'HTML5 player error';
+                    break;
+                case 100:
+                    errorMsg = 'Video not found';
+                    break;
+                case 101:
+                case 150:
+                    errorMsg = 'Video cannot be embedded';
+                    break;
+            }
+            infoEl.innerHTML = '<div class="error">' + errorMsg + '</div>';
+            infoEl.style.display = 'block';
+        }
+    </script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
