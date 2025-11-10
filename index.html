@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>YouTube Player</title>
     <style>
         body {
@@ -22,6 +23,7 @@
         #player {
             width: 100%;
             height: 100%;
+            pointer-events: auto;
         }
         .info {
             position: absolute;
@@ -71,11 +73,15 @@
                     'playsinline': 1,
                     'autoplay': 0,
                     'controls': 1,
-                    'rel': 0
+                    'rel': 0,
+                    'modestbranding': 1,
+                    'fs': 1,
+                    'iv_load_policy': 3
                 },
                 events: {
                     'onReady': onPlayerReady,
-                    'onError': onPlayerError
+                    'onError': onPlayerError,
+                    'onStateChange': onPlayerStateChange
                 }
             });
         }
@@ -92,6 +98,45 @@
 
         function onPlayerReady(event) {
             document.getElementById('info').style.display = 'none';
+            // Notify parent frame
+            window.parent.postMessage({
+                event: 'ready',
+                videoId: videoId
+            }, '*');
+        }
+
+        function onPlayerStateChange(event) {
+            let eventName = '';
+            switch(event.data) {
+                case YT.PlayerState.UNSTARTED:
+                    eventName = 'unstarted';
+                    break;
+                case YT.PlayerState.ENDED:
+                    eventName = 'ended';
+                    break;
+                case YT.PlayerState.PLAYING:
+                    eventName = 'playing';
+                    break;
+                case YT.PlayerState.PAUSED:
+                    eventName = 'paused';
+                    break;
+                case YT.PlayerState.BUFFERING:
+                    eventName = 'buffering';
+                    break;
+                case YT.PlayerState.CUED:
+                    eventName = 'cued';
+                    break;
+            }
+
+            // Notify parent frame
+            if (eventName) {
+                window.parent.postMessage({
+                    event: eventName,
+                    videoId: videoId,
+                    currentTime: player.getCurrentTime(),
+                    duration: player.getDuration()
+                }, '*');
+            }
         }
 
         function onPlayerError(event) {
@@ -114,6 +159,14 @@
             }
             infoEl.innerHTML = '<div class="error">' + errorMsg + '</div>';
             infoEl.style.display = 'block';
+
+            // Notify parent frame about error
+            window.parent.postMessage({
+                event: 'error',
+                errorCode: event.data,
+                errorMessage: errorMsg,
+                videoId: videoId
+            }, '*');
         }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
